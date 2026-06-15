@@ -1,0 +1,30 @@
+# Fly.io config. Deploy with: fly launch --no-deploy (to create the app + volume),
+# then `fly volumes create fairway_data --size 1` and `fly deploy`.
+# Set secrets with: fly secrets set ODDS_API_KEY=... SPORTRADAR_API_KEY=...
+app = "fairway-fantasy"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "8080"
+  DB_PATH = "/data/app.db"
+  ODDS_PROVIDER = "mock"      # "theoddsapi" once ODDS_API_KEY is set
+  SCORE_PROVIDER = "mock"     # "sportradar" once SPORTRADAR_API_KEY is set
+  SCORE_POLL_SECONDS = "60"
+  CORS_ORIGINS = "*"          # pin to your Vercel frontend URL in production
+
+# Persistent volume for the SQLite database.
+[[mounts]]
+  source = "fairway_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Keep one machine always running so the score poller / draft timer stay alive.
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1

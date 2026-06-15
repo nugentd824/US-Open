@@ -14,6 +14,7 @@ primary_region = "iad"
   ODDS_PROVIDER = "mock"      # "theoddsapi" once ODDS_API_KEY is set
   SCORE_PROVIDER = "mock"     # "sportradar" once SPORTRADAR_API_KEY is set
   SCORE_POLL_SECONDS = "60"
+  CORS_ORIGINS = "*"          # pin to your Vercel frontend URL in production
 
 # Persistent volume for the SQLite database.
 [[mounts]]

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { WS_BASE } from '../lib/config.js';
 
 // Subscribes to a league's websocket room and invokes `onMessage` for each
 // pushed update ({ type: 'lobby'|'draft'|'leaderboard', payload }). Reconnects
@@ -15,8 +16,7 @@ export function useLeagueSocket(leagueId, onMessage) {
     let retry;
 
     const connect = () => {
-      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-      ws = new WebSocket(`${proto}://${location.host}/ws?leagueId=${leagueId}`);
+      ws = new WebSocket(`${WS_BASE}/ws?leagueId=${leagueId}`);
       ws.onopen = () => setConnected(true);
       ws.onmessage = (e) => {
         try {

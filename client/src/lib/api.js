@@ -1,6 +1,9 @@
-// Thin fetch wrapper. All endpoints are same-origin under /api.
+// Thin fetch wrapper. Endpoints live under <API_BASE>/api — same-origin by
+// default, or a remote backend when VITE_API_BASE is set (split deploy).
+import { API_BASE } from './config.js';
+
 async function request(method, path, body) {
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(`${API_BASE}/api${path}`, {
     method,
     headers: { 'content-type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,

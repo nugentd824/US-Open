@@ -9,7 +9,9 @@ services:
     name: fairway-fantasy
     runtime: node
     plan: starter # "starter" (or higher) is required for a persistent disk
-    buildCommand: npm install && npm run build
+    # --include=dev forces Vite (a devDependency) to install even though
+    # NODE_ENV=production, so the client build succeeds.
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: node server/src/index.js
     healthCheckPath: /api/health
     envVars:
@@ -23,6 +25,10 @@ services:
         value: mock # set to "sportradar" once SPORTRADAR_API_KEY is configured
       - key: SCORE_POLL_SECONDS
         value: "60"
+      # Lock cross-origin access to your Vercel frontend, e.g.
+      # https://fairway-fantasy.vercel.app  ("*" allows any origin).
+      - key: CORS_ORIGINS
+        value: "*"
       - key: ODDS_API_KEY
         sync: false # set as a secret in the dashboard
       - key: SPORTRADAR_API_KEY

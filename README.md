@@ -148,6 +148,24 @@ Config files are included for the common hosts:
 
 WebSockets work on all of the above on the same port — no extra configuration.
 
+### Split deploy: static frontend on Vercel + backend on Render/Fly
+
+You can keep the static client on **Vercel** and run the Node backend on a
+long-running host. (You cannot run the *backend* on Vercel — it's a persistent
+process; a serverless function crashes with `FUNCTION_INVOCATION_FAILED`.)
+
+1. **Backend → Render/Fly** (above). Note its public URL, e.g.
+   `https://fairway-fantasy.onrender.com`. Set `CORS_ORIGINS` to your Vercel URL
+   (or leave `*`).
+2. **Frontend → Vercel.** `vercel.json` is included and pins a **static** build
+   (no serverless function): it runs `npm run build` and serves `client/dist`
+   with SPA routing. In the Vercel project's **Environment Variables**, set:
+   - `VITE_API_BASE = https://fairway-fantasy.onrender.com` (your backend URL)
+   - optionally `VITE_WS_BASE` (otherwise derived from `VITE_API_BASE`, http→ws)
+
+   These are read at build time, so the static client calls your backend's
+   `/api` and `/ws` directly. Redeploy after changing them.
+
 ## Environment variables
 
 Copy `.env.example` → `.env`. All config is environment-driven; **no keys are
@@ -165,6 +183,9 @@ hardcoded**.
 | `SPORTRADAR_TOURNAMENT_ID` | — | Pin a Sportradar tournament id (see provider note). |
 | `SCORE_POLL_SECONDS` | `20` | How often scores are polled and pushed. Use 60–120 for real APIs. |
 | `MOCK_ROUND_SECONDS` | `120` | Mock only: real seconds per simulated round. Lower = faster demo. |
+| `CORS_ORIGINS` | `*` | Allowed browser origins for cross-origin (split) deploys. Comma-separated, or `*`. |
+| `VITE_API_BASE` | — | **Client build:** backend base URL for a split deploy (unset = same origin). |
+| `VITE_WS_BASE` | — | **Client build:** WebSocket base URL (defaults to `VITE_API_BASE` with http→ws). |
 
 ## Data providers (and how to swap them)
 

@@ -25,6 +25,11 @@ export const config = {
   scorePollSeconds: Number(process.env.SCORE_POLL_SECONDS || 20),
   mockRoundSeconds: Number(process.env.MOCK_ROUND_SECONDS || 120),
 
+  // Comma-separated list of allowed browser origins for cross-origin (split)
+  // deploys, or "*" to allow any. Default "*": there are no cookies/auth headers,
+  // only a player id in request bodies, so this is safe for a friends game.
+  corsOrigins: (process.env.CORS_ORIGINS || '*').trim(),
+
   isProduction: process.env.NODE_ENV === 'production',
   repoRoot,
 };

@@ -15,6 +15,26 @@ import { oddsProviderName } from './providers/oddsProvider.js';
 import { scoreProviderName } from './providers/scoreProvider/index.js';
 
 const app = express();
+
+// CORS — lets a separately-hosted client (e.g. static frontend on Vercel) call
+// this backend. No cookies are used, so reflecting the origin is safe; pin it
+// with CORS_ORIGINS in production.
+const allowedOrigins =
+  config.corsOrigins === '*' ? '*' : config.corsOrigins.split(',').map((s) => s.trim());
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins === '*') {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  } else if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Vary', 'Origin');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
+
 app.use(express.json());
 
 // Expose which providers are active so the UI can label data sources.

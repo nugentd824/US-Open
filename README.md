@@ -285,3 +285,18 @@ WebSocket pushes (per league room): `{ type: 'lobby' | 'draft' | 'leaderboard', 
 - **Cross-provider name matching** is heuristic for real providers (see above).
 - The default SQLite file is local to the server; back up `data/app.db` if you
   care about history.
+
+### Tests
+
+Core logic is covered by Node's built-in test runner (zero extra deps):
+
+```bash
+npm test
+```
+
+This exercises the **best-N-of-M scoring + every edge case** (cut/WD/DQ freeze,
+not-started, fewer-than-3), the **snake-draft ordering**, **cross-provider name
+matching**, and a **DB-backed wiring test** that runs a full league from
+tournament selection → snake draft → live leaderboard against the mock provider.
+CI is not wired up, and the React frontend is not browser-tested here (the
+environment blocked downloading a headless browser).

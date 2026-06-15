@@ -23,7 +23,7 @@ db.exec(`
     tournament_json    TEXT,                     -- cached {name,dates,course,...}
     roster_size        INTEGER NOT NULL DEFAULT 6,
     scores_counted     INTEGER NOT NULL DEFAULT 3,
-    pick_timer_seconds INTEGER,                  -- nullable = no timer
+    pick_timer_seconds INTEGER DEFAULT 3600,     -- per-pick clock in seconds; NULL = no timer
     draft_order_json   TEXT,                     -- JSON array of team ids, in order
     status             TEXT NOT NULL DEFAULT 'lobby', -- lobby | drafting | active
     created_at         INTEGER NOT NULL
@@ -35,6 +35,7 @@ db.exec(`
     player_id       TEXT NOT NULL,               -- owner (localStorage-generated id)
     name            TEXT NOT NULL,
     draft_position  INTEGER,                     -- 1-based slot, set when draft starts
+    auto_pick       INTEGER NOT NULL DEFAULT 0,  -- 1 = auto-draft this team's picks
     joined_at       INTEGER NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_teams_league ON teams(league_id);
@@ -84,5 +85,14 @@ db.exec(`
     PRIMARY KEY (tournament_id, golfer_id)
   );
 `);
+
+// --- lightweight migrations -------------------------------------------------
+// CREATE TABLE IF NOT EXISTS won't add columns to a pre-existing table, so add
+// new columns idempotently here.
+function ensureColumn(table, column, ddl) {
+  const exists = db.prepare(`PRAGMA table_info(${table})`).all().some((c) => c.name === column);
+  if (!exists) db.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
+}
+ensureColumn('teams', 'auto_pick', 'auto_pick INTEGER NOT NULL DEFAULT 0');
 
 export default db;

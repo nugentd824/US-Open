@@ -19,6 +19,8 @@ const qTeamByPlayer = db.prepare('SELECT * FROM teams WHERE league_id = ? AND pl
 const qTeamCount = db.prepare('SELECT COUNT(*) AS n FROM teams WHERE league_id = ?');
 
 const MAX_TEAMS = 12;
+const DEFAULT_PICK_TIMER = 3600; // 60 minutes — suits an async draft
+const MAX_PICK_TIMER = 86400; // 24 hours
 
 function broadcastLobby(leagueId) {
   broadcast(leagueId, 'lobby', getLeagueState(leagueId));
@@ -44,9 +46,9 @@ leaguesRouter.post('/', (req, res, next) => {
 
     db.transaction(() => {
       db.prepare(
-        `INSERT INTO leagues (id, name, invite_code, creator_player_id, status, created_at)
-         VALUES (?, ?, ?, ?, 'lobby', ?)`
-      ).run(id, name.trim(), code, playerId, Date.now());
+        `INSERT INTO leagues (id, name, invite_code, creator_player_id, status, pick_timer_seconds, created_at)
+         VALUES (?, ?, ?, ?, 'lobby', ?, ?)`
+      ).run(id, name.trim(), code, playerId, DEFAULT_PICK_TIMER, Date.now());
       db.prepare(
         `INSERT INTO teams (id, league_id, player_id, name, joined_at) VALUES (?, ?, ?, ?, ?)`
       ).run(nanoid(12), id, playerId, teamName.trim(), Date.now());
@@ -142,7 +144,7 @@ leaguesRouter.patch('/:id/settings', (req, res, next) => {
     let pickTimer = league.pick_timer_seconds;
     if ('pickTimerSeconds' in (req.body || {})) {
       const v = req.body.pickTimerSeconds;
-      pickTimer = v == null || v === '' ? null : clampInt(v, 60, 10, 600);
+      pickTimer = v == null || v === '' ? null : clampInt(v, DEFAULT_PICK_TIMER, 10, MAX_PICK_TIMER);
     }
 
     db.prepare(

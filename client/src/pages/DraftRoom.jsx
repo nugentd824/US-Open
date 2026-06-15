@@ -10,6 +10,7 @@ export default function DraftRoom({ leagueId, league, draft, myTeam, playerId })
   const [hideDrafted, setHideDrafted] = useState(true);
   const [err, setErr] = useState('');
   const [picking, setPicking] = useState(null);
+  const [savingAuto, setSavingAuto] = useState(false);
   const [now, setNow] = useState(Date.now());
 
   // Refresh the pool whenever a pick is made (availability changes).
@@ -47,6 +48,8 @@ export default function DraftRoom({ leagueId, league, draft, myTeam, playerId })
 
   const onClockTeam = draft.onClockTeamId ? teamById[draft.onClockTeamId] : null;
   const myTurn = !draft.complete && draft.onClockTeamId === myTeam?.id;
+  const myTeamView = myTeam ? teamById[myTeam.id] : null;
+  const myAuto = !!myTeamView?.autoPick;
   const remaining =
     draft.pickDeadline && !draft.complete ? Math.max(0, Math.round((draft.pickDeadline - now) / 1000)) : null;
 
@@ -59,6 +62,18 @@ export default function DraftRoom({ leagueId, league, draft, myTeam, playerId })
       setErr(e.message);
     } finally {
       setPicking(null);
+    }
+  }
+
+  async function toggleAuto() {
+    setErr('');
+    setSavingAuto(true);
+    try {
+      await api.setAutoPick(leagueId, { playerId, enabled: !myAuto });
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setSavingAuto(false);
     }
   }
 
@@ -95,6 +110,21 @@ export default function DraftRoom({ leagueId, league, draft, myTeam, playerId })
 
       <ErrorBanner>{err}</ErrorBanner>
 
+      {/* Auto-pick toggle (your team) */}
+      {myTeam && !draft.complete && (
+        <Card className={`flex items-center justify-between p-3 ${myAuto ? 'ring-1 ring-amber-300' : ''}`}>
+          <div className="min-w-0 pr-3">
+            <div className="text-sm font-semibold">Auto-pick</div>
+            <div className="text-xs text-slate-400">
+              {myAuto
+                ? "On — we'll draft the top available golfer for you on every turn."
+                : 'Off — you make your own picks. Turn on if you need to step away.'}
+            </div>
+          </div>
+          <Switch on={myAuto} disabled={savingAuto} onClick={toggleAuto} />
+        </Card>
+      )}
+
       {/* Draft board */}
       <Card className="p-4">
         <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Draft board</div>
@@ -109,9 +139,12 @@ export default function DraftRoom({ leagueId, league, draft, myTeam, playerId })
                   draft.onClockTeamId === t.id ? 'border-fairway bg-green-50/50' : 'border-slate-200'
                 }`}
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-1">
                   <span className="truncate text-sm font-semibold">{t.name}</span>
-                  {t.id === myTeam?.id && <Pill className="bg-green-100 text-fairway">You</Pill>}
+                  <div className="flex flex-shrink-0 gap-1">
+                    {t.autoPick && <Pill className="bg-amber-100 text-amber-700">AUTO</Pill>}
+                    {t.id === myTeam?.id && <Pill className="bg-green-100 text-fairway">You</Pill>}
+                  </div>
                 </div>
                 <div className="mt-1 space-y-0.5">
                   {Array.from({ length: league.rosterSize }).map((_, i) => {
@@ -195,6 +228,27 @@ export default function DraftRoom({ leagueId, league, draft, myTeam, playerId })
         </Card>
       )}
     </div>
+  );
+}
+
+function Switch({ on, disabled, onClick }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      disabled={disabled}
+      onClick={onClick}
+      className={`relative h-7 w-12 flex-shrink-0 rounded-full transition ${
+        on ? 'bg-fairway' : 'bg-slate-300'
+      } ${disabled ? 'opacity-50' : ''}`}
+    >
+      <span
+        className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${
+          on ? 'left-[22px]' : 'left-0.5'
+        }`}
+      />
+    </button>
   );
 }
 

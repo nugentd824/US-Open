@@ -185,12 +185,14 @@ export default function Lobby({ league, isCreator, myTeam, onChange, reload }) {
           <SettingRow
             label="Pick timer"
             value={league.pickTimerSeconds ?? 0}
-            options={[0, 30, 60, 90, 120]}
-            fmt={(v) => (v === 0 ? 'Off' : `${v}s`)}
+            options={[0, 60, 300, 900, 1800, 3600]}
+            fmt={(v) => (v === 0 ? 'Off' : `${v / 60}m`)}
             onPick={(v) => saveSettings({ pickTimerSeconds: v === 0 ? null : v })}
           />
           <p className="text-xs text-slate-400">
-            Best {league.scoresCounted} of {league.rosterSize} golfers count each update.
+            Best {league.scoresCounted} of {league.rosterSize} golfers count each update. When the
+            pick timer runs out — or a player turns on auto-pick — the top available golfer is drafted
+            automatically.
           </p>
         </Card>
       )}

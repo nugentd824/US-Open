@@ -37,9 +37,12 @@ Three primary screens: **Draft Room**, **Live Leaderboard**, **My Team**.
   Searchable and sortable. *Odds drive draft order and the auto-pick only — they
   never affect scoring.*
 - **Snake draft** — randomized or host-set order; 1→N, N→1, 1→N… for as many
-  rounds as roster spots. A drafted golfer is removed from the pool. Optional
-  pick timer auto-drafts the top remaining favorite on expiry. Draft state is
-  **persisted**, so a refresh/disconnect resumes cleanly.
+  rounds as roster spots. A drafted golfer is removed from the pool. A per-pick
+  timer (default **60 minutes**, suiting an async draft) auto-drafts the top
+  remaining favorite on expiry, and any player can flip **auto-pick On/Off** for
+  their own team to have their picks made for them while they're away (the host
+  can toggle it for anyone). Draft state is **persisted**, so a
+  refresh/disconnect resumes cleanly.
 - **Live scoring** — the server polls the score provider on a schedule and
   **pushes** updates over WebSockets, so leaderboards move without a refresh.
 - **Leaderboard & team views** — rank, team name, best-3 combined score, an
@@ -237,6 +240,7 @@ All endpoints are JSON under `/api`. WebSocket: `/ws?leagueId=<id>`.
 | `GET` | `/api/leagues/:id/draft` | Live draft board. |
 | `POST` | `/api/leagues/:id/draft/start` | Host starts (optional order). |
 | `POST` | `/api/leagues/:id/draft/pick` | Make a pick. |
+| `POST` | `/api/leagues/:id/draft/autopick` | Toggle a team's auto-pick on/off. |
 | `GET` | `/api/leagues/:id/leaderboard` | Live best-3-of-6 standings. |
 
 WebSocket pushes (per league room): `{ type: 'lobby' | 'draft' | 'leaderboard', payload }`.

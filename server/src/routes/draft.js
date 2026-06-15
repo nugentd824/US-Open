@@ -1,16 +1,17 @@
 // Draft endpoints: view the board, start the draft, and make picks.
 import { Router } from 'express';
 import { db } from '../db.js';
-import { startDraft, makePick, getDraftView } from '../services/draftEngine.js';
+import { startDraft, makePick, getDraftView, setTeamAutoPick } from '../services/draftEngine.js';
 import { getLeagueState } from '../services/leagues.js';
 import { buildLeaderboard } from '../services/leaderboard.js';
-import { pollScoresOnce } from '../services/poller.js';
+import { pollScoresOnce, runAutopicks } from '../services/poller.js';
 import { broadcast } from '../ws.js';
 
 export const draftRouter = Router();
 
 const qLeague = db.prepare('SELECT * FROM leagues WHERE id = ?');
 const qTeamByPlayer = db.prepare('SELECT * FROM teams WHERE league_id = ? AND player_id = ?');
+const qTeamById = db.prepare('SELECT * FROM teams WHERE id = ?');
 
 // GET /api/leagues/:id/draft — the live draft board.
 draftRouter.get('/:id/draft', (req, res) => {
@@ -58,6 +59,36 @@ draftRouter.post('/:id/draft/pick', (req, res, next) => {
         .catch(() => {});
     }
     res.json(view);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/leagues/:id/draft/autopick — toggle a team's auto-pick on/off.
+// A player controls their own team; the league creator can toggle any team
+// (handy when someone is away). Turning it on while on the clock drafts now.
+draftRouter.post('/:id/draft/autopick', (req, res, next) => {
+  try {
+    const league = qLeague.get(req.params.id);
+    if (!league) return res.status(404).json({ error: 'League not found' });
+    const { playerId, enabled, teamId } = req.body || {};
+
+    let team = qTeamByPlayer.get(league.id, playerId);
+    if (teamId && league.creator_player_id === playerId) {
+      const target = qTeamById.get(teamId);
+      if (target && target.league_id === league.id) team = target;
+    }
+    if (!team) return res.status(403).json({ error: 'You do not have a team in this league' });
+
+    setTeamAutoPick(team.id, !!enabled);
+
+    // If enabling triggers an immediate pick, runAutopicks broadcasts it.
+    // Otherwise broadcast the toggle state so everyone's board updates.
+    let view = null;
+    if (league.status === 'drafting') view = runAutopicks(league.id);
+    if (!view) broadcast(league.id, 'draft', getDraftView(league.id));
+
+    res.json(getDraftView(league.id));
   } catch (err) {
     next(err);
   }

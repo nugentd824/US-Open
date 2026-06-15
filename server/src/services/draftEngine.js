@@ -30,6 +30,7 @@ const qTeams = db.prepare('SELECT * FROM teams WHERE league_id = ? ORDER BY join
 const qDraftState = db.prepare('SELECT * FROM draft_state WHERE league_id = ?');
 const qPicks = db.prepare('SELECT * FROM picks WHERE league_id = ? ORDER BY overall_pick ASC');
 const qPoolGolfer = db.prepare('SELECT * FROM golfer_pool WHERE league_id = ? AND golfer_id = ?');
+const qTeamById = db.prepare('SELECT * FROM teams WHERE id = ?');
 const qNextFavorite = db.prepare(`
   SELECT gp.* FROM golfer_pool gp
   WHERE gp.league_id = ?
@@ -124,20 +125,34 @@ export function makePick(leagueId, teamId, golferId, { auto = false } = {}) {
   return getDraftView(leagueId);
 }
 
-// Timer enforcement: if the team on the clock has run out of time, auto-draft
-// the highest-odds (favorite) golfer still available. Returns the new view if a
-// pick was made, otherwise null. Called by the draft timer loop.
-export function autopickIfExpired(leagueId) {
+// Auto-pick the team on the clock when EITHER the team has its auto-pick toggle
+// ON, OR the pick timer has expired. Drafts the highest-odds (favorite) golfer
+// still available. Returns the new view if a pick was made, otherwise null.
+// Called by the draft timer loop and right after a player flips auto-pick on.
+export function maybeAutopick(leagueId) {
   const league = qLeague.get(leagueId);
-  if (!league || league.status !== 'drafting' || !league.pick_timer_seconds) return null;
+  if (!league || league.status !== 'drafting') return null;
   const ds = qDraftState.get(leagueId);
-  if (!ds || !ds.pick_deadline || Date.now() < ds.pick_deadline) return null;
+  if (!ds) return null;
+
+  const order = JSON.parse(league.draft_order_json);
+  if (ds.current_pick > totalPicks(order, league.roster_size)) return null;
+  const { teamId } = snakeTeamForPick(order, ds.current_pick);
+  const team = qTeamById.get(teamId);
+
+  const timerExpired =
+    league.pick_timer_seconds && ds.pick_deadline && Date.now() >= ds.pick_deadline;
+  const teamAuto = !!(team && team.auto_pick);
+  if (!timerExpired && !teamAuto) return null;
 
   const favorite = qNextFavorite.get(leagueId);
   if (!favorite) return null;
-  const order = JSON.parse(league.draft_order_json);
-  const { teamId } = snakeTeamForPick(order, ds.current_pick);
   return makePick(leagueId, teamId, favorite.golfer_id, { auto: true });
+}
+
+// Set a team's auto-pick toggle.
+export function setTeamAutoPick(teamId, enabled) {
+  db.prepare('UPDATE teams SET auto_pick = ? WHERE id = ?').run(enabled ? 1 : 0, teamId);
 }
 
 // Build the full draft view used by the API and websocket broadcasts.
@@ -187,6 +202,7 @@ export function getDraftView(leagueId) {
       name: t.name,
       playerId: t.player_id,
       draftPosition: t.draft_position,
+      autoPick: !!t.auto_pick,
       picks: (picksByTeam[t.id] || []).map((p) => ({
         golferId: p.golfer_id,
         name: p.golfer_name,

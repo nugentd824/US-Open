@@ -29,4 +29,5 @@ export const api = {
   draft: (id) => request('GET', `/leagues/${id}/draft`),
   startDraft: (id, b) => request('POST', `/leagues/${id}/draft/start`, b),
   pick: (id, b) => request('POST', `/leagues/${id}/draft/pick`, b),
+  setAutoPick: (id, b) => request('POST', `/leagues/${id}/draft/autopick`, b),
 };

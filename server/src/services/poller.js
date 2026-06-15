@@ -2,21 +2,20 @@
 //  1) Score poller — every SCORE_POLL_SECONDS, fetch live scores for each active
 //     league's tournament, cache them, rebuild leaderboards, and push to clients.
 //  2) Draft timer — every second, auto-pick for any league whose pick clock has
-//     expired, and push the updated draft board.
+//     expired OR whose on-clock team has its auto-pick toggle on; push the board.
 import { db } from '../db.js';
 import { config } from '../config.js';
 import { scoreProvider } from '../providers/scoreProvider/index.js';
 import { buildLeaderboard } from './leaderboard.js';
-import { autopickIfExpired, getDraftView } from './draftEngine.js';
+import { maybeAutopick } from './draftEngine.js';
+import { getLeagueState } from './leagues.js';
 import { broadcast } from '../ws.js';
 
 const qActiveTournaments = db.prepare(
   "SELECT DISTINCT tournament_id FROM leagues WHERE status = 'active' AND tournament_id IS NOT NULL"
 );
 const qActiveLeagues = db.prepare("SELECT id FROM leagues WHERE status = 'active'");
-const qDraftingLeagues = db.prepare(
-  "SELECT id FROM leagues WHERE status = 'drafting' AND pick_timer_seconds IS NOT NULL"
-);
+const qDraftingLeagues = db.prepare("SELECT id FROM leagues WHERE status = 'drafting'");
 
 const upsertScore = db.prepare(`
   INSERT INTO scores_cache (tournament_id, golfer_id, name, to_par, status, thru, round, position, updated_at)
@@ -66,11 +65,33 @@ async function pollScoresOnce() {
   }
 }
 
+// Drain all due auto-picks for a league (consecutive auto-pick teams resolve in
+// one pass), then broadcast the result. If the draft completes, also flip the
+// lobby live and push the first leaderboard. Returns the last view, or null.
+export function runAutopicks(leagueId, { doBroadcast = true } = {}) {
+  let last = null;
+  for (let guard = 0; guard < 1000; guard++) {
+    const view = maybeAutopick(leagueId);
+    if (!view) break;
+    last = view;
+    if (view.complete) break;
+  }
+  if (last && doBroadcast) {
+    broadcast(leagueId, 'draft', last);
+    if (last.complete) {
+      broadcast(leagueId, 'lobby', getLeagueState(leagueId));
+      pollScoresOnce()
+        .then(() => broadcast(leagueId, 'leaderboard', buildLeaderboard(leagueId)))
+        .catch(() => {});
+    }
+  }
+  return last;
+}
+
 function tickDraftTimers() {
   for (const { id } of qDraftingLeagues.all()) {
     try {
-      const view = autopickIfExpired(id);
-      if (view) broadcast(id, 'draft', view);
+      runAutopicks(id);
     } catch (err) {
       console.warn(`[poller] draft autopick failed for ${id}:`, err.message);
     }

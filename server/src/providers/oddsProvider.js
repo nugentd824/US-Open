@@ -39,6 +39,24 @@ function requireKey() {
   }
 }
 
+// The Odds API labels golf outright markets like title="US Open Winner",
+// description="2026 Winner". Turn that into a clean tournament name ("US Open
+// 2026") and drop the bogus "course" (the API has no course data).
+function prettyGolfEvent(s) {
+  let name = (s.title || s.key).replace(/\s*winner\s*$/i, '').trim();
+  const year = (s.description || '').match(/\b(20\d{2})\b/)?.[1];
+  if (year && !name.includes(year)) name = `${name} ${year}`;
+  return {
+    id: s.key,
+    name,
+    course: '', // The Odds API exposes no course
+    location: '',
+    startDate: null,
+    endDate: null,
+    par: 72, // not exposed by the API; default and let scoring relativize
+  };
+}
+
 const theOddsApi = {
   async getTournaments() {
     requireKey();
@@ -46,17 +64,7 @@ const theOddsApi = {
     if (!res.ok) throw new Error(`Odds API ${res.status}: ${await res.text()}`);
     const sports = await res.json();
     // Each active golf sport is a selectable "tournament".
-    return sports
-      .filter((s) => s.group === 'Golf' && s.active)
-      .map((s) => ({
-        id: s.key,
-        name: s.title,
-        course: s.description || '',
-        location: '',
-        startDate: null,
-        endDate: null,
-        par: 72, // The Odds API does not expose par; default and let scoring relativize.
-      }));
+    return sports.filter((s) => s.group === 'Golf' && s.active).map(prettyGolfEvent);
   },
 
   async getTournament(id) {

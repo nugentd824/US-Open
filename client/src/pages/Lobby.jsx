@@ -146,10 +146,11 @@ export default function Lobby({ league, isCreator, myTeam, onChange, reload }) {
         {league.tournament ? (
           <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
             <div className="font-semibold">{league.tournament.name}</div>
-            <div className="text-sm text-slate-500">
-              {league.tournament.course}
-              {league.tournament.location ? ` · ${league.tournament.location}` : ''}
-            </div>
+            {(league.tournament.course || league.tournament.location) && (
+              <div className="text-sm text-slate-500">
+                {[league.tournament.course, league.tournament.location].filter(Boolean).join(' · ')}
+              </div>
+            )}
             {league.tournament.startDate && (
               <div className="text-sm text-slate-500">
                 {league.tournament.startDate} – {league.tournament.endDate}

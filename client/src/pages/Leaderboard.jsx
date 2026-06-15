@@ -35,7 +35,8 @@ export default function Leaderboard({ lb, myTeam }) {
         <h1 className="text-xl font-bold tracking-tight">{lb.leagueName}</h1>
         {lb.tournament && (
           <p className="text-sm text-slate-500">
-            {lb.tournament.name} · {lb.tournament.course}
+            {lb.tournament.name}
+            {lb.tournament.course ? ` · ${lb.tournament.course}` : ''}
           </p>
         )}
         <div className="mt-1 flex items-center gap-2 text-xs text-slate-400">

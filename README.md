@@ -158,8 +158,10 @@ process; a serverless function crashes with `FUNCTION_INVOCATION_FAILED`.)
    `https://fairway-fantasy.onrender.com`. Set `CORS_ORIGINS` to your Vercel URL
    (or leave `*`).
 2. **Frontend → Vercel.** `vercel.json` is included and pins a **static** build
-   (no serverless function): it runs `npm run build` and serves `client/dist`
-   with SPA routing. In the Vercel project's **Environment Variables**, set:
+   (no serverless function): it installs and builds **only the `client`
+   workspace** (`--no-workspaces`, so the server's native `better-sqlite3` is
+   never installed) and serves `client/dist` with SPA routing. In the Vercel
+   project's **Environment Variables**, set:
    - `VITE_API_BASE = https://fairway-fantasy.onrender.com` (your backend URL)
    - optionally `VITE_WS_BASE` (otherwise derived from `VITE_API_BASE`, http→ws)
 

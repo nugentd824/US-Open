@@ -45,6 +45,7 @@ export function getLeagueState(leagueId) {
       name: t.name,
       playerId: t.player_id,
       draftPosition: t.draft_position,
+      autoPick: !!t.auto_pick,
     })),
   };
 }

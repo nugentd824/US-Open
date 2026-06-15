@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Card, Input, Pill, Spinner, ErrorBanner } from '../components/ui.jsx';
+import { Button, Card, Input, Pill, Spinner, ErrorBanner, Switch } from '../components/ui.jsx';
 import { api } from '../lib/api.js';
 import { impliedPct, americanFromDecimal } from '../lib/format.js';
 
@@ -228,27 +228,6 @@ export default function DraftRoom({ leagueId, league, draft, myTeam, playerId })
         </Card>
       )}
     </div>
-  );
-}
-
-function Switch({ on, disabled, onClick }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      disabled={disabled}
-      onClick={onClick}
-      className={`relative h-7 w-12 flex-shrink-0 rounded-full transition ${
-        on ? 'bg-fairway' : 'bg-slate-300'
-      } ${disabled ? 'opacity-50' : ''}`}
-    >
-      <span
-        className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${
-          on ? 'left-[22px]' : 'left-0.5'
-        }`}
-      />
-    </button>
   );
 }
 

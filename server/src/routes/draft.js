@@ -82,13 +82,17 @@ draftRouter.post('/:id/draft/autopick', (req, res, next) => {
 
     setTeamAutoPick(team.id, !!enabled);
 
-    // If enabling triggers an immediate pick, runAutopicks broadcasts it.
-    // Otherwise broadcast the toggle state so everyone's board updates.
-    let view = null;
-    if (league.status === 'drafting') view = runAutopicks(league.id);
-    if (!view) broadcast(league.id, 'draft', getDraftView(league.id));
+    if (league.status === 'drafting') {
+      // If enabling triggers an immediate pick, runAutopicks broadcasts it.
+      // Otherwise broadcast the toggle state so everyone's board updates.
+      const view = runAutopicks(league.id);
+      if (!view) broadcast(league.id, 'draft', getDraftView(league.id));
+    } else {
+      // Pre-armed from the lobby — reflect the toggle in lobby state.
+      broadcast(league.id, 'lobby', getLeagueState(league.id));
+    }
 
-    res.json(getDraftView(league.id));
+    res.json(getLeagueState(league.id));
   } catch (err) {
     next(err);
   }

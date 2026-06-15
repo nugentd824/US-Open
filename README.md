@@ -1,5 +1,7 @@
 # ⛳ Fairway Fantasy
 
+[![CI](https://github.com/nugentd824/US-Open/actions/workflows/ci.yml/badge.svg)](https://github.com/nugentd824/US-Open/actions/workflows/ci.yml)
+
 A mobile-friendly web app for a fantasy PGA golf game played among a small group
 of friends (2–12 players). Each league does a **snake draft** of real golfers for
 an upcoming PGA tournament, every team ends up with a 6-golfer roster, and during

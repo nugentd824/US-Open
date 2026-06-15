@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button, Card, Label, ErrorBanner, Pill } from '../components/ui.jsx';
+import { Button, Card, Label, ErrorBanner, Pill, Switch } from '../components/ui.jsx';
 import { api } from '../lib/api.js';
 import { getPlayerId } from '../lib/player.js';
 
@@ -9,6 +9,8 @@ export default function Lobby({ league, isCreator, myTeam, onChange, reload }) {
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [savingAuto, setSavingAuto] = useState(false);
+  const myAuto = !!myTeam?.autoPick;
 
   useEffect(() => {
     if (isCreator && !league.tournament) api.tournaments().then((r) => setTournaments(r.tournaments)).catch(() => {});
@@ -57,6 +59,18 @@ export default function Lobby({ league, isCreator, myTeam, onChange, reload }) {
       onChange(st);
     } catch (e) {
       setErr(e.message);
+    }
+  }
+
+  async function toggleAuto() {
+    setErr('');
+    setSavingAuto(true);
+    try {
+      await api.setAutoPick(league.id, { playerId: getPlayerId(), enabled: !myAuto });
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setSavingAuto(false);
     }
   }
 
@@ -165,6 +179,21 @@ export default function Lobby({ league, isCreator, myTeam, onChange, reload }) {
           <p className="text-sm text-slate-500">Waiting for the host to choose a tournament…</p>
         )}
       </Card>
+
+      {/* Auto-pick pre-arm (any player, their own team) */}
+      {myTeam && (
+        <Card className={`flex items-center justify-between p-4 ${myAuto ? 'ring-1 ring-amber-300' : ''}`}>
+          <div className="min-w-0 pr-3">
+            <Label>Auto-pick for {myTeam.name}</Label>
+            <div className="text-xs text-slate-400">
+              {myAuto
+                ? "On — when the draft starts, your picks are made automatically (top available golfer)."
+                : "Off — you'll draft your own golfers. Pre-arm this now if you can't make the draft."}
+            </div>
+          </div>
+          <Switch on={myAuto} disabled={savingAuto} onClick={toggleAuto} />
+        </Card>
+      )}
 
       {/* Settings */}
       {isCreator && (

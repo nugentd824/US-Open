@@ -39,6 +39,27 @@ export function Pill({ children, className = '' }) {
   );
 }
 
+export function Switch({ on, disabled, onClick }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      disabled={disabled}
+      onClick={onClick}
+      className={`relative h-7 w-12 flex-shrink-0 rounded-full transition ${
+        on ? 'bg-fairway' : 'bg-slate-300'
+      } ${disabled ? 'opacity-50' : ''}`}
+    >
+      <span
+        className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${
+          on ? 'left-[22px]' : 'left-0.5'
+        }`}
+      />
+    </button>
+  );
+}
+
 export function Spinner() {
   return (
     <div className="flex items-center justify-center py-16">

@@ -11,7 +11,7 @@ process.env.ODDS_PROVIDER = 'mock';
 process.env.SCORE_PROVIDER = 'mock';
 
 const { db } = await import('../src/db.js');
-const { setLeagueTournament } = await import('../src/services/leagues.js');
+const { setLeagueTournament, getLeagueState } = await import('../src/services/leagues.js');
 const { startDraft, maybeAutopick, setTeamAutoPick, getDraftView } = await import(
   '../src/services/draftEngine.js'
 );
@@ -79,4 +79,10 @@ test('runAutopicks drains consecutive auto-pick teams to completion', () => {
   assert.equal(finalView.status, 'active');
   assert.equal(finalView.picks.length, 12); // 2 teams x 6
   for (const t of finalView.teams) assert.equal(t.picks.length, 6);
+});
+
+test('lobby state exposes each team auto-pick flag (pre-arm support)', () => {
+  const st = getLeagueState(LEAGUE);
+  const t1 = st.teams.find((t) => t.id === T1);
+  assert.equal(t1.autoPick, true); // set earlier in this test file
 });

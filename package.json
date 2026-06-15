@@ -1,0 +1,25 @@
+{
+  "name": "fairway-fantasy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fantasy PGA golf — snake draft + live best-3-of-6 leaderboard for a small group of friends.",
+  "type": "module",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,client -c green,cyan \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "npm --workspace server run dev",
+    "dev:client": "npm --workspace client run dev",
+    "build": "npm --workspace client run build",
+    "start": "NODE_ENV=production npm --workspace server run start",
+    "postinstall": "node -e \"console.log('\\nInstalled. Copy .env.example to .env, then run: npm run dev\\n')\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

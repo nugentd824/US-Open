@@ -18,6 +18,7 @@ Three primary screens: **Draft Room**, **Live Leaderboard**, **My Team**.
 - [How scoring works](#how-scoring-works)
 - [Tech & architecture](#tech--architecture)
 - [Quick start](#quick-start)
+- [Deployment](#deployment)
 - [Environment variables](#environment-variables)
 - [Data providers (and how to swap them)](#data-providers-and-how-to-swap-them)
 - [Running a mock demo](#running-a-mock-demo)
@@ -120,6 +121,32 @@ and no live tournament**.
 
 To play with friends, share the invite link (`/join/<CODE>`). For real use across
 the internet, run `npm run build && npm start` on a host they can reach.
+
+## Deployment
+
+This app is **one long-running Node process** (it serves the API, the WebSocket
+hub, and the built SPA on a single port) with a background score poller and a
+SQLite database. Deploy it on any host that runs a persistent process — **not**
+a serverless platform like Vercel, where the schedulers wouldn't run, WebSockets
+can't stay connected, and the SQLite file wouldn't persist.
+
+Two things matter on every host:
+
+1. **Set env vars** (see below) — at minimum your provider keys if you're going
+   live; the defaults run on the mock providers.
+2. **Persist `data/app.db`** — mount a volume at the database directory (or point
+   `DB_PATH` at one) so leagues/drafts/scores survive restarts.
+
+Config files are included for the common hosts:
+
+| Host | How |
+| --- | --- |
+| **Render** | `render.yaml` is a Blueprint: New → Blueprint → pick this repo. It provisions a web service + a 1 GB persistent disk and sets `DB_PATH`. Add `ODDS_API_KEY` / `SPORTRADAR_API_KEY` as secrets in the dashboard. |
+| **Fly.io** | `fly launch --no-deploy`, then `fly volumes create fairway_data --size 1`, `fly secrets set ODDS_API_KEY=… SPORTRADAR_API_KEY=…`, and `fly deploy`. Uses the `Dockerfile` + `fly.toml` (volume mounted at `/data`). |
+| **Railway / VPS / Docker** | Build the `Dockerfile` and run it with a volume at `/app/data`. e.g. `docker build -t fairway . && docker run -p 4000:4000 -v fairway-data:/app/data --env-file .env fairway`. |
+| **Bare metal** | `npm install && npm run build && npm start` behind a process manager (systemd/pm2) and HTTPS (the per-device player id rides in request bodies). |
+
+WebSockets work on all of the above on the same port — no extra configuration.
 
 ## Environment variables
 

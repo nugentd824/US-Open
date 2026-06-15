@@ -1,0 +1,33 @@
+# Render Blueprint — one-click deploy of the single long-running Node server.
+# In the Render dashboard: New > Blueprint, point it at this repo. Then set the
+# secret env vars (ODDS_API_KEY / SPORTRADAR_API_KEY) under the service.
+#
+# WebSockets work on Render web services on the same port — no extra config.
+# A persistent disk keeps the SQLite database across deploys/restarts.
+services:
+  - type: web
+    name: fairway-fantasy
+    runtime: node
+    plan: starter # "starter" (or higher) is required for a persistent disk
+    buildCommand: npm install && npm run build
+    startCommand: node server/src/index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_PATH
+        value: /var/data/app.db
+      - key: ODDS_PROVIDER
+        value: mock # set to "theoddsapi" once ODDS_API_KEY is configured
+      - key: SCORE_PROVIDER
+        value: mock # set to "sportradar" once SPORTRADAR_API_KEY is configured
+      - key: SCORE_POLL_SECONDS
+        value: "60"
+      - key: ODDS_API_KEY
+        sync: false # set as a secret in the dashboard
+      - key: SPORTRADAR_API_KEY
+        sync: false # set as a secret in the dashboard
+    disk:
+      name: fairway-data
+      mountPath: /var/data
+      sizeGB: 1

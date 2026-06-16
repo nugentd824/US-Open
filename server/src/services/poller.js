@@ -26,6 +26,12 @@ const upsertScore = db.prepare(`
     updated_at = excluded.updated_at
 `);
 
+// Remove cache rows not refreshed by the latest poll (e.g. a golfer whose id
+// changed because the provider's name form shifted), so a score can't freeze.
+const deleteStaleScores = db.prepare(
+  'DELETE FROM scores_cache WHERE tournament_id = ? AND updated_at < ?'
+);
+
 async function pollScoresOnce() {
   const tournamentIds = qActiveTournaments.all().map((r) => r.tournament_id);
   const now = Date.now();
@@ -49,6 +55,9 @@ async function pollScoresOnce() {
         }
       });
       writeAll(scores);
+      // Only prune when we actually got data, so a transient empty/error
+      // response doesn't wipe the cached leaderboard.
+      if (scores.length > 0) deleteStaleScores.run(tid, now);
     } catch (err) {
       console.warn(`[poller] score fetch failed for ${tid}:`, err.message);
     }

@@ -9,6 +9,7 @@ export const slugify = (name) =>
   name
     .toLowerCase()
     .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '') // strip accents so "Åberg" -> "aberg", not "a-berg"
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '');
 

@@ -48,7 +48,12 @@ function parseCompetitor(c, eventState) {
   }
 
   let status = mapStatus(st);
-  if (toPar == null && status === 'active') status = 'not_started';
+  // Pre-tournament / not yet teed off: ESPN sends no score. Treat as even par
+  // (E) so the golfer displays "E" and counts as 0 — everyone starts level.
+  if (toPar == null && status === 'active') {
+    status = 'not_started';
+    toPar = 0;
+  }
 
   // round: explicit period, else number of rounds with linescores.
   const round =

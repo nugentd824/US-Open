@@ -16,10 +16,11 @@
 //     getScores(tournamentId): Promise<Entry[]>
 //   }
 //
-// Swap with SCORE_PROVIDER=mock|sportradar.
+// Swap with SCORE_PROVIDER=mock|espn|sportradar.
 import { config } from '../../config.js';
 import { mockScoreProvider } from './mockProvider.js';
 import { sportradarScoreProvider } from './sportradarProvider.js';
+import { espnScoreProvider } from './espnProvider.js';
 
 let provider;
 let providerName;
@@ -28,6 +29,10 @@ switch (config.scoreProvider) {
   case 'sportradar':
     provider = sportradarScoreProvider;
     providerName = 'sportradar';
+    break;
+  case 'espn':
+    provider = espnScoreProvider;
+    providerName = 'espn';
     break;
   case 'mock':
   default:

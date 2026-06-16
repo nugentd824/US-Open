@@ -180,7 +180,8 @@ hardcoded**.
 | `DB_PATH` | `./data/app.db` | SQLite file location. |
 | `ODDS_PROVIDER` | `mock` | `mock` \| `theoddsapi`. Source of the field + win odds. |
 | `ODDS_API_KEY` | — | The Odds API key (required if `ODDS_PROVIDER=theoddsapi`). |
-| `SCORE_PROVIDER` | `mock` | `mock` \| `sportradar`. Source of live scores. |
+| `SCORE_PROVIDER` | `mock` | `mock` \| `espn` \| `sportradar`. Source of live scores. |
+| `ESPN_EVENT_ID` | — | Optional: pin a specific ESPN event id (else the current PGA event). |
 | `SPORTRADAR_API_KEY` | — | Sportradar Golf key (required if `SCORE_PROVIDER=sportradar`). |
 | `SPORTRADAR_ACCESS_LEVEL` | `trial` | `trial` \| `production`. |
 | `SPORTRADAR_TOURNAMENT_ID` | — | Pin a Sportradar tournament id (see provider note). |
@@ -213,6 +214,16 @@ you can mix and match.
 - **`mock`** (default): a deterministic, time-evolving tournament simulation
   (`server/src/providers/scoreProvider/mockProvider.js`) that exercises every
   edge case — in-progress "thru X", a mid-event cut, a WD, and a DQ.
+- **`espn`** (free, no key): live PGA leaderboard via ESPN's public golf JSON
+  (`server/src/providers/scoreProvider/espnProvider.js`). It auto-uses the
+  current PGA event, so there's no tournament id to resolve. Not an officially
+  documented/licensed API — stable in practice, but unofficial (use at your own
+  discretion). Optionally pin a specific event with `ESPN_EVENT_ID`.
+  ```env
+  SCORE_PROVIDER=espn
+  SCORE_POLL_SECONDS=120   # be polite to an unofficial endpoint
+  # ESPN_EVENT_ID=401580351   # optional: pin a specific ESPN event
+  ```
 - **`sportradar`** (recommended for production): the **sanctioned** golf data
   feed — [Sportradar Golf v3](https://developer.sportradar.com/golf/reference).
   ```env

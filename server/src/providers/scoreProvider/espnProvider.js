@@ -92,6 +92,27 @@ function pickEvent(events, pinnedId) {
   );
 }
 
+// Debug helper: returns the selected event, a couple of raw competitor objects,
+// and what parseCompetitor() makes of them — so you can confirm the field paths
+// against live data without shipping a new build each time.
+export async function espnDebug() {
+  const res = await fetch(SCOREBOARD, { headers: { 'user-agent': UA, accept: 'application/json' } });
+  const data = await res.json();
+  const events = data.events || [];
+  const event = pickEvent(events, process.env.ESPN_EVENT_ID);
+  const comp = event && ((event.competitions && event.competitions[0]) || event);
+  const competitors = (comp && comp.competitors) || [];
+  return {
+    ok: res.ok,
+    eventCount: events.length,
+    event: event
+      ? { id: event.id, name: event.name, state: event.status?.type?.state }
+      : null,
+    sampleRaw: competitors.slice(0, 2),
+    parsed: competitors.slice(0, 8).map(parseCompetitor).filter(Boolean),
+  };
+}
+
 export const espnScoreProvider = {
   name: 'espn',
 

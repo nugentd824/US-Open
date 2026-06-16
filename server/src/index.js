@@ -42,6 +42,17 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, oddsProvider: oddsProviderName, scoreProvider: scoreProviderName });
 });
 
+// Temporary: inspect what the ESPN provider sees live (raw + parsed). Safe to
+// remove once the live leaderboard is confirmed working.
+app.get('/api/debug/espn', async (_req, res) => {
+  try {
+    const { espnDebug } = await import('./providers/scoreProvider/espnProvider.js');
+    res.json(await espnDebug());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.use('/api/tournaments', tournamentsRouter);
 app.use('/api/leagues', leaguesRouter);
 app.use('/api/leagues', draftRouter);

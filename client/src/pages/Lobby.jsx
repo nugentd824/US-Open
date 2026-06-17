@@ -1,7 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button, Card, Label, ErrorBanner, Pill, Switch } from '../components/ui.jsx';
 import { api } from '../lib/api.js';
 import { getPlayerId } from '../lib/player.js';
+
+// Fisher-Yates shuffle of an array of ids (returns a new array).
+function shuffleIds(ids) {
+  const a = [...ids];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 export default function Lobby({ league, isCreator, myTeam, onChange, reload }) {
   const [tournaments, setTournaments] = useState([]);
@@ -16,14 +26,18 @@ export default function Lobby({ league, isCreator, myTeam, onChange, reload }) {
     if (isCreator && !league.tournament) api.tournaments().then((r) => setTournaments(r.tournaments)).catch(() => {});
   }, [isCreator, league.tournament]);
 
-  // Keep the order preview in sync as teams join.
+  // Draft order is RANDOM by default. Re-roll whenever the set of teams changes
+  // (someone joins/leaves) so it's always a fair shuffle — never the join order
+  // — even if the host never taps "Shuffle". Other lobby updates (settings,
+  // auto-pick) don't change membership, so they leave the order alone.
+  const membershipRef = useRef('');
   useEffect(() => {
-    setOrder((prev) => {
-      const ids = league.teams.map((t) => t.id);
-      const kept = prev.filter((id) => ids.includes(id));
-      const added = ids.filter((id) => !kept.includes(id));
-      return [...kept, ...added];
-    });
+    const ids = league.teams.map((t) => t.id);
+    const key = [...ids].sort().join(',');
+    if (key !== membershipRef.current) {
+      membershipRef.current = key;
+      setOrder(shuffleIds(ids));
+    }
   }, [league.teams]);
 
   const shareUrl = `${location.origin}/join/${league.inviteCode}`;
@@ -75,12 +89,7 @@ export default function Lobby({ league, isCreator, myTeam, onChange, reload }) {
   }
 
   function shuffle() {
-    const a = [...order];
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    setOrder(a);
+    setOrder(shuffleIds(order));
   }
 
   async function start() {
@@ -231,11 +240,14 @@ export default function Lobby({ league, isCreator, myTeam, onChange, reload }) {
       {isCreator && (
         <Card className="p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <Label>Draft order</Label>
+            <Label>Draft order (randomized)</Label>
             <Button variant="ghost" onClick={shuffle} className="text-xs px-2 py-1">
-              🎲 Shuffle
+              🎲 Re-shuffle
             </Button>
           </div>
+          <p className="text-xs text-slate-400">
+            Order is shuffled automatically — this is the order picks will follow. Re-shuffle to re-roll.
+          </p>
           <ol className="space-y-1">
             {order.map((tid, i) => (
               <li key={tid} className="flex items-center gap-3 rounded-lg bg-slate-50 px-3 py-2">

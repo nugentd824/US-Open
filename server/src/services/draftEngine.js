@@ -155,6 +155,25 @@ export function setTeamAutoPick(teamId, enabled) {
   db.prepare('UPDATE teams SET auto_pick = ? WHERE id = ?').run(enabled ? 1 : 0, teamId);
 }
 
+// Reset the draft back to the lobby: clear all picks, the draft clock, the
+// order, and team slots, and flip the league to 'lobby' so the host can
+// re-configure and start again. The tournament + golfer pool are kept. No-op if
+// already in the lobby.
+export function resetDraft(leagueId) {
+  const league = qLeague.get(leagueId);
+  if (!league) throw httpError(404, 'League not found');
+  if (league.status === 'lobby') return getDraftView(leagueId);
+
+  const tx = db.transaction(() => {
+    db.prepare('DELETE FROM picks WHERE league_id = ?').run(leagueId);
+    db.prepare('DELETE FROM draft_state WHERE league_id = ?').run(leagueId);
+    db.prepare("UPDATE leagues SET status = 'lobby', draft_order_json = NULL WHERE id = ?").run(leagueId);
+    db.prepare('UPDATE teams SET draft_position = NULL WHERE league_id = ?').run(leagueId);
+  });
+  tx();
+  return getDraftView(leagueId);
+}
+
 // Build the full draft view used by the API and websocket broadcasts.
 export function getDraftView(leagueId) {
   const league = qLeague.get(leagueId);

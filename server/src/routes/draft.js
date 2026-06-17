@@ -1,7 +1,7 @@
 // Draft endpoints: view the board, start the draft, and make picks.
 import { Router } from 'express';
 import { db } from '../db.js';
-import { startDraft, makePick, getDraftView, setTeamAutoPick } from '../services/draftEngine.js';
+import { startDraft, makePick, getDraftView, setTeamAutoPick, resetDraft } from '../services/draftEngine.js';
 import { getLeagueState } from '../services/leagues.js';
 import { buildLeaderboard } from '../services/leaderboard.js';
 import { pollScoresOnce, runAutopicks } from '../services/poller.js';
@@ -29,6 +29,24 @@ draftRouter.post('/:id/draft/start', (req, res, next) => {
       return res.status(403).json({ error: 'Only the league creator can start the draft' });
     }
     const view = startDraft(league.id, req.body?.order);
+    broadcast(league.id, 'draft', view);
+    broadcast(league.id, 'lobby', getLeagueState(league.id));
+    res.json(view);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/leagues/:id/draft/reset — creator returns the league to the lobby,
+// clearing all picks so the draft can be re-run.
+draftRouter.post('/:id/draft/reset', (req, res, next) => {
+  try {
+    const league = qLeague.get(req.params.id);
+    if (!league) return res.status(404).json({ error: 'League not found' });
+    if (league.creator_player_id !== req.body?.playerId) {
+      return res.status(403).json({ error: 'Only the league creator can reset the draft' });
+    }
+    const view = resetDraft(league.id);
     broadcast(league.id, 'draft', view);
     broadcast(league.id, 'lobby', getLeagueState(league.id));
     res.json(view);

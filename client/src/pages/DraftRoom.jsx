@@ -11,7 +11,24 @@ export default function DraftRoom({ leagueId, league, draft, myTeam, playerId })
   const [err, setErr] = useState('');
   const [picking, setPicking] = useState(null);
   const [savingAuto, setSavingAuto] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [now, setNow] = useState(Date.now());
+
+  const isCreator = league?.creatorPlayerId === playerId;
+
+  async function resetDraft() {
+    if (!window.confirm('Reset the draft? This clears every pick and sends everyone back to the lobby to start over.')) return;
+    setErr('');
+    setResetting(true);
+    try {
+      await api.resetDraft(leagueId, { playerId });
+      // LeaguePage's socket handler switches everyone back to the lobby.
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setResetting(false);
+    }
+  }
 
   // Refresh the pool whenever a pick is made (availability changes).
   const pickCount = draft?.picks?.length ?? 0;
@@ -225,6 +242,21 @@ export default function DraftRoom({ leagueId, league, draft, myTeam, playerId })
               )}
             </ul>
           )}
+        </Card>
+      )}
+
+      {/* Host control: reset the draft back to the lobby */}
+      {isCreator && (
+        <Card className="flex items-center justify-between p-3">
+          <div className="min-w-0 pr-3">
+            <div className="text-sm font-semibold">Host control</div>
+            <div className="text-xs text-slate-400">
+              {draft.complete ? 'Re-draft this league' : 'Start the draft over'} — clears all picks and returns to the lobby.
+            </div>
+          </div>
+          <Button variant="danger" className="px-3 py-1.5 text-xs" disabled={resetting} onClick={resetDraft}>
+            {resetting ? 'Resetting…' : 'Reset draft'}
+          </Button>
         </Card>
       )}
     </div>

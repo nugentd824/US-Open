@@ -62,6 +62,8 @@ export default function LeaguePage() {
             api.leaderboard(id).then(setLb).catch(() => {});
             setTab('leaderboard');
           }
+          // Draft was reset -> everyone back to the lobby.
+          if (next.status === 'lobby') setTab('lobby');
         }
         return next;
       });

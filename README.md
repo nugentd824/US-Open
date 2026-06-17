@@ -305,6 +305,7 @@ All endpoints are JSON under `/api`. WebSocket: `/ws?leagueId=<id>`.
 | `POST` | `/api/leagues/:id/draft/start` | Host starts (optional order). |
 | `POST` | `/api/leagues/:id/draft/pick` | Make a pick. |
 | `POST` | `/api/leagues/:id/draft/autopick` | Toggle a team's auto-pick on/off. |
+| `POST` | `/api/leagues/:id/draft/reset` | Host resets the draft back to the lobby. |
 | `GET` | `/api/leagues/:id/leaderboard` | Live best-3-of-6 standings. |
 
 WebSocket pushes (per league room): `{ type: 'lobby' | 'draft' | 'leaderboard', payload }`.

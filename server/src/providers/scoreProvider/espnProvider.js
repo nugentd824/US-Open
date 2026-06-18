@@ -67,11 +67,11 @@ function parseCompetitor(c, eventState) {
   let round = typeof st.period === 'number' ? st.period : null;
   if (round == null) round = current?.period ?? rounds[0]?.period ?? null;
 
-  // thru: tee time (ISO, formatted client-side) for not-started; holes for
-  // active; status display when present; "F" for a finished round.
+  // thru: tee time (tournament-local label) for not-started; holes for active;
+  // status display when present; "F" for a finished round.
   let thru = null;
   if (status === 'not_started') {
-    thru = teeTimeISO(rounds);
+    thru = teeTimeLabel(rounds);
   } else if (typeof st.thru === 'number') {
     thru = st.thru >= 18 ? 'F' : String(st.thru);
   } else if (st.displayValue) {
@@ -88,17 +88,24 @@ function parseCompetitor(c, eventState) {
   return { golferId: slugify(name), name, toPar, status, thru, round, position };
 }
 
-// Pull a tee time (as an ISO string) out of a golfer's round statistics, e.g.
-// "Thu Jun 18 09:19:00 PDT 2026". Returns null if none is found/parseable.
-function teeTimeISO(rounds) {
+// Pull a tee time out of a golfer's round statistics, e.g.
+// "Thu Jun 18 09:19:00 PDT 2026" -> "9:19 AM". ESPN's timezone tag is unreliable
+// (it labels event-local times as PDT), so we take the wall-clock numbers as-is
+// — that's the official tee-sheet time and is correct for every viewer.
+function teeTimeLabel(rounds) {
   for (const r of rounds) {
     const stats = r?.statistics?.categories?.[0]?.stats;
     if (!Array.isArray(stats)) continue;
     for (const s of stats) {
       const dv = s?.displayValue;
-      if (typeof dv === 'string' && /\d{1,2}:\d{2}/.test(dv) && /\b20\d{2}\b/.test(dv)) {
-        const d = new Date(dv);
-        if (!Number.isNaN(d.getTime())) return d.toISOString();
+      if (typeof dv === 'string' && /\b20\d{2}\b/.test(dv)) {
+        const m = dv.match(/\b(\d{1,2}):(\d{2})/);
+        if (m) {
+          const h = parseInt(m[1], 10);
+          const ampm = h < 12 ? 'AM' : 'PM';
+          const h12 = h % 12 === 0 ? 12 : h % 12;
+          return `${h12}:${m[2]} ${ampm}`;
+        }
       }
     }
   }

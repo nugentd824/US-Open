@@ -26,10 +26,20 @@ export function statusLabel(score) {
     case 'dq':
       return 'DQ';
     case 'not_started':
-      return 'Pre';
+      // `thru` carries an ISO tee time for not-yet-started golfers (if known).
+      return formatTeeTime(score.thru) || 'Pre';
     default:
       return score.thru ? (score.thru === 'F' ? 'F' : `thru ${score.thru}`) : 'Live';
   }
+}
+
+// Format an ISO timestamp to the viewer's local time, e.g. "12:19 PM". Returns
+// null if the value isn't a parseable timestamp.
+export function formatTeeTime(v) {
+  if (!v) return null;
+  const t = Date.parse(v);
+  if (Number.isNaN(t)) return null;
+  return new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
 // Badge styling per status.

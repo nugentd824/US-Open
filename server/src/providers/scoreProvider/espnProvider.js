@@ -47,47 +47,64 @@ function parseCompetitor(c, eventState) {
     if (stat) toPar = parseToPar(stat.displayValue ?? stat.value);
   }
 
+  // Holes played: on a LIVE event ESPN puts per-hole detail in `linescores` (an
+  // array of rounds whose nested `linescores` are the holes played). The current
+  // round is the last one with detail; no detail anywhere = hasn't teed off.
+  const rounds = Array.isArray(c.linescores) ? c.linescores : [];
+  let current = null;
+  for (const r of rounds) {
+    if (Array.isArray(r.linescores) && r.linescores.length > 0) current = r;
+  }
+  const started = !!current;
+
   let status = mapStatus(st);
-  // Pre-tournament / not yet teed off: ESPN sends no score. Treat as even par
-  // (E) so the golfer displays "E" and counts as 0 — everyone starts level.
-  if (toPar == null && status === 'active') {
-    status = 'not_started';
-    toPar = 0;
-  }
+  // No holes played and not cut/wd/dq -> not yet teed off.
+  if (status === 'active' && !started && typeof st.thru !== 'number') status = 'not_started';
+  // Pre/just-started golfers are even par (so they show E and count as 0).
+  if (toPar == null && (status === 'active' || status === 'not_started')) toPar = 0;
 
-  // round + thru. Prefer an explicit status (some ESPN shapes have it). On a
-  // LIVE event the data is in `linescores` instead: an array of rounds, each
-  // round's nested `linescores` being the holes played so far. The current
-  // round is the last one with per-hole detail; thru = how many holes it has.
+  // round
   let round = typeof st.period === 'number' ? st.period : null;
+  if (round == null) round = current?.period ?? rounds[0]?.period ?? null;
+
+  // thru: tee time (ISO, formatted client-side) for not-started; holes for
+  // active; status display when present; "F" for a finished round.
   let thru = null;
-  if (typeof st.thru === 'number') thru = st.thru >= 18 ? 'F' : String(st.thru);
-  else if (st.displayValue) thru = String(st.displayValue);
-
-  if (round == null || thru == null) {
-    const rounds = Array.isArray(c.linescores) ? c.linescores : [];
-    let current = null;
-    for (const r of rounds) {
-      if (Array.isArray(r.linescores) && r.linescores.length > 0) current = r;
-    }
-    if (current) {
-      if (round == null) round = typeof current.period === 'number' ? current.period : null;
-      if (thru == null) {
-        const holes = current.linescores.length;
-        thru = holes >= 18 ? 'F' : String(holes);
-      }
-    } else if (round == null && rounds.length) {
-      round = typeof rounds[0].period === 'number' ? rounds[0].period : null;
-    }
+  if (status === 'not_started') {
+    thru = teeTimeISO(rounds);
+  } else if (typeof st.thru === 'number') {
+    thru = st.thru >= 18 ? 'F' : String(st.thru);
+  } else if (st.displayValue) {
+    thru = String(st.displayValue);
+  } else if (started) {
+    thru = current.linescores.length >= 18 ? 'F' : String(current.linescores.length);
+  } else if (eventState === 'post' && status === 'active') {
+    thru = 'F';
   }
-
-  if (thru == null && eventState === 'post' && status === 'active') thru = 'F';
   if (status === 'cut') thru = 'CUT';
 
   const position = st.position?.displayName ? String(st.position.displayName) : null;
 
   return { golferId: slugify(name), name, toPar, status, thru, round, position };
 }
+
+// Pull a tee time (as an ISO string) out of a golfer's round statistics, e.g.
+// "Thu Jun 18 09:19:00 PDT 2026". Returns null if none is found/parseable.
+function teeTimeISO(rounds) {
+  for (const r of rounds) {
+    const stats = r?.statistics?.categories?.[0]?.stats;
+    if (!Array.isArray(stats)) continue;
+    for (const s of stats) {
+      const dv = s?.displayValue;
+      if (typeof dv === 'string' && /\d{1,2}:\d{2}/.test(dv) && /\b20\d{2}\b/.test(dv)) {
+        const d = new Date(dv);
+        if (!Number.isNaN(d.getTime())) return d.toISOString();
+      }
+    }
+  }
+  return null;
+}
+
 
 // When ESPN doesn't provide positions, compute them from to-par with ties ("T4").
 function assignPositions(rows) {

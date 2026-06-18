@@ -55,20 +55,33 @@ function parseCompetitor(c, eventState) {
     toPar = 0;
   }
 
-  // round: explicit period, else number of rounds with linescores.
-  const round =
-    typeof st.period === 'number'
-      ? st.period
-      : Array.isArray(c.linescores) && c.linescores.length
-      ? c.linescores.length
-      : null;
-
-  // thru: from status when present (live); a finished player in a completed
-  // event is "F"; otherwise unknown.
+  // round + thru. Prefer an explicit status (some ESPN shapes have it). On a
+  // LIVE event the data is in `linescores` instead: an array of rounds, each
+  // round's nested `linescores` being the holes played so far. The current
+  // round is the last one with per-hole detail; thru = how many holes it has.
+  let round = typeof st.period === 'number' ? st.period : null;
   let thru = null;
   if (typeof st.thru === 'number') thru = st.thru >= 18 ? 'F' : String(st.thru);
   else if (st.displayValue) thru = String(st.displayValue);
-  else if (eventState === 'post' && status === 'active') thru = 'F';
+
+  if (round == null || thru == null) {
+    const rounds = Array.isArray(c.linescores) ? c.linescores : [];
+    let current = null;
+    for (const r of rounds) {
+      if (Array.isArray(r.linescores) && r.linescores.length > 0) current = r;
+    }
+    if (current) {
+      if (round == null) round = typeof current.period === 'number' ? current.period : null;
+      if (thru == null) {
+        const holes = current.linescores.length;
+        thru = holes >= 18 ? 'F' : String(holes);
+      }
+    } else if (round == null && rounds.length) {
+      round = typeof rounds[0].period === 'number' ? rounds[0].period : null;
+    }
+  }
+
+  if (thru == null && eventState === 'post' && status === 'active') thru = 'F';
   if (status === 'cut') thru = 'CUT';
 
   const position = st.position?.displayName ? String(st.position.displayName) : null;
